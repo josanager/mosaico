@@ -151,7 +151,7 @@ const ensureProjectLibrary = async () => {
   const fallbackProject =
     project ||
     createDefaultProject({
-      name: 'Contaminación 2026 · 5 min',
+      name: 'Nuevo proyecto de video',
       preset: 'landscape',
     });
   const id = fallbackProject.id || crypto.randomUUID();
