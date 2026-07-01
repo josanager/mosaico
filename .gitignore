@@ -1,0 +1,17 @@
+node_modules
+.DS_Store
+.playwright-cli
+agent.md
+renders/*
+!renders/.gitkeep
+public/media/*
+!public/media/.gitkeep
+projects/current.json
+projects/media.json
+projects/pollution-2026-script.md
+projects/pollution-2026-storyboard.json
+projects/projects-index.json
+projects/render-tuning.json
+projects/video-projects/*
+!projects/video-projects/.gitkeep
+.remotion-cache

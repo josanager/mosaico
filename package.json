@@ -1,0 +1,66 @@
+{
+  "name": "mosaico-studio",
+  "version": "1.1.0",
+  "description": "Local visual video editor powered by Remotion.",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/josanager/mosaico.git"
+  },
+  "homepage": "https://github.com/josanager/mosaico",
+  "bin": {
+    "mosaico-studio": "./bin/mosaico-studio.mjs",
+    "mosaico": "./bin/mosaico-studio.mjs"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "server",
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.14.0"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n api,studio -c yellow,magenta \"node server/index.mjs\" \"vite\"",
+    "build": "node -e \"require('node:fs').rmSync('dist', {recursive: true, force: true})\" && tsc --noEmit && vite build",
+    "start": "node bin/mosaico-studio.mjs --workspace . --no-open",
+    "start:server": "node server/index.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "benchmark:render": "node scripts/benchmark-render.mjs",
+    "demo:pollution": "node scripts/build-pollution-demo.mjs"
+  },
+  "dependencies": {
+    "@imgly/background-removal": "^1.7.0",
+    "@remotion/bundler": "4.0.482",
+    "@remotion/media": "4.0.482",
+    "@remotion/player": "4.0.482",
+    "@remotion/renderer": "4.0.482",
+    "archiver": "^7.0.1",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "lucide-react": "^0.468.0",
+    "multer": "^2.0.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "4.0.482",
+    "uuid": "^11.0.5",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@types/archiver": "^6.0.3",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.10.5",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.6",
+    "vitest": "^2.1.8"
+  }
+}
