@@ -59,6 +59,35 @@ Opciones útiles:
 mosaico-studio --workspace ./mi-proyecto --port 3001 --no-open
 ```
 
+## Flujo humano + agente
+
+Mosaico usa un documento declarativo como fuente común. El humano lo edita desde el editor visual; un agente puede leerlo, validarlo y aplicar operaciones por CLI o API sin simular clicks.
+
+```bash
+mosaico-studio document --workspace ./mi-proyecto
+mosaico-studio validate --workspace ./mi-proyecto
+mosaico-studio apply operations.json --workspace ./mi-proyecto
+```
+
+Un archivo de operaciones puede ser un array o un objeto con `operations`:
+
+```json
+{
+  "operations": [
+    {"type": "updateProject", "patch": {"name": "Video editado por agente"}},
+    {"scope": "media", "type": "addFolder", "id": "footage", "name": "Footage"}
+  ]
+}
+```
+
+La API local expone el mismo contrato:
+
+```text
+GET  /api/document
+PUT  /api/document
+POST /api/operations
+```
+
 ## Render tuning
 
 Para recalcular el perfil de render de la máquina actual:

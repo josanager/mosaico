@@ -1,9 +1,13 @@
 import {describe, expect, it} from 'vitest';
 import {
+  applyDocumentOperations,
+  applyProjectOperations,
+  createMosaicoDocument,
   ensureProjectDuration,
   moveClipToTrack,
   snapFrame,
   trimClip,
+  validateMosaicoDocument,
 } from './editor-core';
 import type {Clip, StudioProject} from './types';
 
@@ -132,5 +136,51 @@ describe('timeline editing', () => {
   it('snaps to nearby clip edges and playhead', () => {
     expect(snapFrame(42, project, 'other', 3, 90)).toBe(40);
     expect(snapFrame(88, project, 'other', 3, 90)).toBe(90);
+  });
+
+  it('applies agent operations through the same project engine', () => {
+    const updated = applyProjectOperations(project, [
+      {
+        type: 'updateClip',
+        clipId: 'clip',
+        patch: {text: 'Edited by operation', x: 120},
+      },
+      {
+        type: 'moveClip',
+        clipId: 'clip',
+        trackId: 'video-2',
+        start: 80,
+      },
+    ]);
+
+    expect(updated.tracks[0].clips).toHaveLength(0);
+    expect(updated.tracks[1].clips[0]).toMatchObject({
+      text: 'Edited by operation',
+      x: 120,
+      start: 80,
+      trackId: 'video-2',
+    });
+  });
+
+  it('validates declarative Mosaico documents', () => {
+    const document = createMosaicoDocument({
+      project,
+      media: {assets: [], folders: []},
+    });
+
+    expect(validateMosaicoDocument(document)).toEqual({ok: true, errors: []});
+  });
+
+  it('applies media and project operations to one document', () => {
+    const document = applyDocumentOperations(
+      createMosaicoDocument({project, media: {assets: [], folders: []}}),
+      [
+        {scope: 'media', type: 'addFolder', id: 'folder-1', name: 'Footage'},
+        {type: 'updateProject', patch: {name: 'Agent-ready edit'}},
+      ],
+    );
+
+    expect(document.project.name).toBe('Agent-ready edit');
+    expect(document.media.folders).toEqual([{id: 'folder-1', name: 'Footage'}]);
   });
 });

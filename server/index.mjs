@@ -6,6 +6,12 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {v4 as uuid} from 'uuid';
 import {
+  applyDocumentOperations,
+  createEmptyProject,
+  createMosaicoDocument,
+  validateMosaicoDocument,
+} from '../lib/document-core.mjs';
+import {
   detectMediaMetadata,
   detectRenderCapabilities,
   ensureWorkspaceDirs,
@@ -56,44 +62,8 @@ const readJsonFile = async (file, fallback) =>
     .then((content) => JSON.parse(content))
     .catch(() => fallback);
 
-const createDefaultProject = ({name, preset = 'landscape'} = {}) => ({
-  id: crypto.randomUUID(),
-  name: name || 'Nuevo proyecto de video',
-  width: preset === 'portrait' ? 1080 : 1920,
-  height: preset === 'portrait' ? 1920 : 1080,
-  fps: 30,
-  durationInFrames: 300,
-  background: '#111214',
-  tracks: [
-    {
-      id: crypto.randomUUID(),
-      name: 'Audio',
-      kind: 'audio',
-      hidden: false,
-      locked: false,
-      muted: false,
-      clips: [],
-    },
-    {
-      id: crypto.randomUUID(),
-      name: 'Video',
-      kind: 'visual',
-      hidden: false,
-      locked: false,
-      muted: false,
-      clips: [],
-    },
-    {
-      id: crypto.randomUUID(),
-      name: 'Text',
-      kind: 'visual',
-      hidden: false,
-      locked: false,
-      muted: false,
-      clips: [],
-    },
-  ],
-});
+const createDefaultProject = ({name, preset = 'landscape'} = {}) =>
+  createEmptyProject({name: name || 'Nuevo proyecto de video', preset});
 
 const getProjectFolder = (entry) => path.join(projectLibraryDir, entry.slug);
 const getProjectStatePaths = (entry) => ({
@@ -339,6 +309,98 @@ app.put('/api/media', async (request, response) => {
   await updateProjectLibraryEntry(entry.id, projectState, request.body, {updatedAt});
   await syncLegacyPointers(entry);
   response.json({ok: true});
+});
+
+app.get('/api/document', async (_request, response) => {
+  const entry = await getActiveProjectEntry();
+  if (!entry) {
+    response.status(404).json({error: 'No active project'});
+    return;
+  }
+  const state = await readProjectState(entry);
+  response.json(createMosaicoDocument(state));
+});
+
+app.put('/api/document', async (request, response) => {
+  const entry = await getActiveProjectEntry();
+  if (!entry) {
+    response.status(404).json({error: 'No active project'});
+    return;
+  }
+
+  const document = createMosaicoDocument(request.body);
+  const validation = validateMosaicoDocument(document);
+  if (!validation.ok) {
+    response.status(400).json({
+      error: 'Invalid Mosaico document',
+      details: validation.errors,
+    });
+    return;
+  }
+
+  const updatedAt = new Date().toISOString();
+  const nextEntry = {
+    id: entry.id,
+    slug: entry.slug,
+    createdAt: entry.createdAt,
+    updatedAt,
+    lastOpenedAt: entry.lastOpenedAt,
+  };
+  await writeProjectState(nextEntry, document.project, document.media);
+  await updateProjectLibraryEntry(entry.id, document.project, document.media, {updatedAt});
+  await syncLegacyPointers(entry);
+  response.json({ok: true, document});
+});
+
+app.post('/api/operations', async (request, response) => {
+  const entry = await getActiveProjectEntry();
+  if (!entry) {
+    response.status(404).json({error: 'No active project'});
+    return;
+  }
+
+  const operations = Array.isArray(request.body?.operations)
+    ? request.body.operations
+    : Array.isArray(request.body)
+      ? request.body
+      : [];
+  if (!operations.length) {
+    response.status(400).json({error: 'No operations provided'});
+    return;
+  }
+
+  try {
+    const currentState = await readProjectState(entry);
+    const nextDocument = applyDocumentOperations(
+      createMosaicoDocument(currentState),
+      operations,
+    );
+    const validation = validateMosaicoDocument(nextDocument);
+    if (!validation.ok) {
+      response.status(400).json({
+        error: 'Operations produced an invalid document',
+        details: validation.errors,
+      });
+      return;
+    }
+
+    const updatedAt = new Date().toISOString();
+    const nextEntry = {
+      id: entry.id,
+      slug: entry.slug,
+      createdAt: entry.createdAt,
+      updatedAt,
+      lastOpenedAt: entry.lastOpenedAt,
+    };
+    await writeProjectState(nextEntry, nextDocument.project, nextDocument.media);
+    await updateProjectLibraryEntry(entry.id, nextDocument.project, nextDocument.media, {updatedAt});
+    await syncLegacyPointers(entry);
+    response.json({ok: true, document: nextDocument});
+  } catch (error) {
+    response.status(400).json({
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 });
 
 app.get('/api/projects', async (_request, response) => {

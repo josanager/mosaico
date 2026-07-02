@@ -1,11 +1,11 @@
 import {create} from 'zustand';
 import {
+  applyProjectOperation,
+  applyProjectOperations,
   ensureProjectDuration,
-  moveClipToTrack,
-  removeClipFromProject,
-  updateClipInProject,
 } from './editor-core';
 import {createSampleProject} from './sample-project';
+import type {ProjectOperation} from './editor-core';
 import type {Clip, MediaAsset, StudioProject, Track, MediaFolder} from './types';
 
 type Snapshot = {project: StudioProject; selectedClipId: string | null};
@@ -25,6 +25,7 @@ type StudioState = {
   selectClip: (clipId: string | null) => void;
   updateProject: (patch: Partial<StudioProject>) => void;
   updateClip: (clipId: string, patch: Partial<Clip>, history?: boolean) => void;
+  applyOperations: (operations: ProjectOperation[], history?: boolean) => void;
   commitProject: (project: StudioProject) => void;
   moveClip: (clipId: string, trackId: string, start: number) => void;
   removeSelected: () => void;
@@ -75,13 +76,26 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     set((state) => ({
       past: [...state.past.slice(-49), snapshot(state)],
       future: [],
-      project: {...state.project, ...patch},
+      project: applyProjectOperation(state.project, {
+        type: 'updateProject',
+        patch,
+      }),
     })),
   updateClip: (clipId, patch, history = true) =>
     set((state) => ({
       past: history ? [...state.past.slice(-49), snapshot(state)] : state.past,
       future: history ? [] : state.future,
-      project: updateClipInProject(state.project, clipId, patch),
+      project: applyProjectOperation(state.project, {
+        type: 'updateClip',
+        clipId,
+        patch,
+      }),
+    })),
+  applyOperations: (operations, history = true) =>
+    set((state) => ({
+      past: history ? [...state.past.slice(-49), snapshot(state)] : state.past,
+      future: history ? [] : state.future,
+      project: applyProjectOperations(state.project, operations),
     })),
   commitProject: (project) =>
     set((state) => ({
@@ -93,7 +107,12 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     set((state) => ({
       past: [...state.past.slice(-49), snapshot(state)],
       future: [],
-      project: moveClipToTrack(state.project, clipId, trackId, start),
+      project: applyProjectOperation(state.project, {
+        type: 'moveClip',
+        clipId,
+        trackId,
+        start,
+      }),
     })),
   removeSelected: () =>
     set((state) => {
@@ -101,7 +120,10 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       return {
         past: [...state.past.slice(-49), snapshot(state)],
         future: [],
-        project: removeClipFromProject(state.project, state.selectedClipId),
+        project: applyProjectOperation(state.project, {
+          type: 'removeClip',
+          clipId: state.selectedClipId,
+        }),
         selectedClipId: null,
       };
     }),
@@ -110,13 +132,10 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       past: [...state.past.slice(-49), snapshot(state)],
       future: [],
       selectedClipId: clip.id,
-      project: ensureProjectDuration({
-        ...state.project,
-        tracks: state.project.tracks.map((track) =>
-          track.id === trackId
-            ? {...track, clips: [...track.clips, clip]}
-            : track,
-        ),
+      project: applyProjectOperation(state.project, {
+        type: 'addClip',
+        trackId,
+        clip,
       }),
     })),
   addTrack: (kind) =>
