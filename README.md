@@ -1,52 +1,83 @@
 # Mosaico Studio
 
-Editor visual de video local construido con Remotion.
+Editor visual de video que corre en local, construido con [Remotion](https://www.remotion.dev/).
 
-## Ejecutarlo con un solo comando
+Abres el estudio, importas medios, editas en un canvas con composición y timeline, e exportas el resultado — sin subir tu material a la nube.
 
-En cualquier equipo con Node.js 20+:
+## Qué es
+
+**Mosaico** es un editor de video local con interfaz de estudio: panel de medios, canvas de composición, inspector y timeline. Está pensado para editar y renderizar en tu máquina, con un documento declarativo que puedes tocar a mano o desde scripts/API.
+
+## Para qué sirve
+
+- Montar piezas cortas (texto, formas, clips) con una UI visual
+- Guardar proyectos, medios y renders en una carpeta de workspace
+- Validar y aplicar cambios al documento por CLI o API (humano + automatización)
+
+## Objetivo
+
+Ofrecer un flujo de edición local, reproducible y controlable: el mismo documento alimenta la UI, la validación y el render con Remotion + ffmpeg.
+
+## Capturas
+
+### Estudio vacío
+
+Panel de medios, canvas, composición e inspector, y timeline listos para empezar.
+
+![Mosaico — estudio vacío](docs/screenshots/mosaico-01-home.png)
+
+### Editor con contenido
+
+Texto y forma en el canvas, clips en el timeline e inspector activos.
+
+![Mosaico — editor con muestra](docs/screenshots/mosaico-02-editor.png)
+
+## Cómo ejecutarlo
+
+### Un solo comando
+
+Con Node.js 20.14+ y `ffmpeg`/`ffprobe` en el sistema:
 
 ```bash
 npx github:josanager/mosaico mi-proyecto
 ```
 
-Eso descarga y ejecuta `Mosaico Studio`, crea la carpeta `mi-proyecto` en tu ubicación actual y guarda ahí:
+Crea la carpeta `mi-proyecto` (proyectos, medios, renders) y arranca el estudio.
 
-- proyectos
-- medios
-- renders
-
-Si quieres usar la carpeta actual:
+Para usar el directorio actual:
 
 ```bash
 npx github:josanager/mosaico .
 ```
 
-## Requisitos
-
-- Node.js 20.14 o superior
-- `ffmpeg` y `ffprobe` disponibles en el sistema
-
-## Desarrollo local
+### Desarrollo local
 
 ```bash
 npm install
 npm run dev
 ```
 
-Interfaz: `http://localhost:3002`  
-API/render: `http://localhost:3001`
+- Interfaz: `http://localhost:3002`
+- API / render: `http://localhost:3001`
 
-Para probar el modo empaquetado local:
+Modo empaquetado:
 
 ```bash
 npm run build
 npm start
 ```
 
-## CLI
+## Stack
 
-También puedes instalarlo globalmente desde GitHub:
+- **Remotion** — composición y render de video
+- **Node.js** — servidor local y CLI (`>= 20.14`)
+- **ffmpeg / ffprobe** — procesamiento de medios en el sistema
+
+## Desarrollo / Documentación
+
+### CLI
+
+Instalación global opcional:
 
 ```bash
 npm install -g git+https://github.com/josanager/mosaico.git
@@ -59,9 +90,7 @@ Opciones útiles:
 mosaico-studio --workspace ./mi-proyecto --port 3001 --no-open
 ```
 
-## Flujo humano + agente
-
-Mosaico usa un documento declarativo como fuente común. El humano lo edita desde el editor visual; un agente puede leerlo, validarlo y aplicar operaciones por CLI o API sin simular clicks.
+Documento, validación y operaciones:
 
 ```bash
 mosaico-studio document --workspace ./mi-proyecto
@@ -69,18 +98,7 @@ mosaico-studio validate --workspace ./mi-proyecto
 mosaico-studio apply operations.json --workspace ./mi-proyecto
 ```
 
-Un archivo de operaciones puede ser un array o un objeto con `operations`:
-
-```json
-{
-  "operations": [
-    {"type": "updateProject", "patch": {"name": "Video editado por agente"}},
-    {"scope": "media", "type": "addFolder", "id": "footage", "name": "Footage"}
-  ]
-}
-```
-
-La API local expone el mismo contrato:
+### API local
 
 ```text
 GET  /api/document
@@ -88,22 +106,22 @@ PUT  /api/document
 POST /api/operations
 ```
 
-## Render tuning
+### Controles del editor
 
-Para recalcular el perfil de render de la máquina actual:
+| Atajo | Acción |
+| --- | --- |
+| Espacio | Reproducir / pausar |
+| ← / → | Un frame |
+| Shift + ← / → | Diez frames |
+| Delete | Borrar clip seleccionado |
+| Cmd/Ctrl + Z | Deshacer |
+| Cmd/Ctrl + Shift + Z | Rehacer |
+| Cmd/Ctrl + S | Guardar |
+
+### Render tuning
 
 ```bash
 npm run benchmark:render
 ```
 
-El resultado se guarda en `projects/render-tuning.json` dentro del workspace activo.
-
-## Controles
-
-- Espacio: reproducir o pausar
-- Flecha izquierda / derecha: mover un frame
-- Shift + flecha izquierda / derecha: mover diez frames
-- Delete: borrar clip seleccionado
-- Cmd/Ctrl + Z: deshacer
-- Cmd/Ctrl + Shift + Z: rehacer
-- Cmd/Ctrl + S: guardar
+Guarda el perfil en `projects/render-tuning.json` del workspace activo.
